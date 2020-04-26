@@ -10,7 +10,6 @@
 
 namespace drl {
 
-extern std::vector<float> lfilter(const float, std::vector<float>);
 torch::Tensor log_prob(const torch::Tensor&, const torch::Tensor&, const torch::Tensor&);
 torch::Tensor sample(const torch::Tensor&, const torch::Tensor&);
 
