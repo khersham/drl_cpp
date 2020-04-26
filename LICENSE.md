@@ -1,4 +1,4 @@
-# VPG_CPP
+# DRL_CPP_VPG
 
 The MIT License
 
