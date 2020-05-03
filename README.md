@@ -10,8 +10,8 @@ mkdir extern
 pushd extern
 wget https://www.roboti.us/download/mujoco200_linux.zip
 unzip mujoco200_linux.zip && mv mujoco200_linux mujoco200
-wget https://download.pytorch.org/libtorch/cu102/libtorch-shared-with-deps-1.5.0.zip
-unzip libtorch-shared-with-deps-1.5.0.zip
+wget https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-1.5.0+cpu.zip
+unzip libtorch-shared-with-deps-1.5.0+cpu.zip
 popd
 ```
 Then create a build directory and call CMake.
@@ -21,9 +21,10 @@ cd build
 cmake -DCMAKE_PREFIX_PATH="${PWD}/../extern/libtorch" ..
 make
 ```
-You can add `-DCUDA_TOOLKIT_ROOT_DIR=<PATH-TO-CUDA>` if you have installed CUDA in non standard folder.
+You can add `-DCUDA_TOOLKIT_ROOT_DIR=<PATH-TO-CUDA>` if you have installed CUDA in non standard folder. 
+Make sure to download Libtorch with CUDA support in the step above.
 
-#How to run
+#How to train
 After the build has finished, call the main binary:
 ```bash
 ./main/main <MUJOCO-KEY-PATH> <PATH-TO-MUJOCO-XML> gpu
@@ -31,3 +32,11 @@ After the build has finished, call the main binary:
 You need to provide your own Mujoco license key and the path to half-cheetah XML model file. 
 The last argument is optional, use `gpu` if you want to train the model with CUDA. For our simple
 model the usage of GPU is actually slower.
+
+#How to watch the video
+I have included a sample code for inference, which is heavily modified from the Mujoco's sample code.
+After the training steps, run:
+```bash
+./inference/video <MUJOCO-KEY-PATH> <PATH-TO-MUJOCO-XML> model.pt 
+```
+Enjoy the show!

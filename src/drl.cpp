@@ -1,10 +1,7 @@
-#include <vector>
 #include <cmath>
 #include <iostream>
 
 #include "drl.h"
-#include "torch/torch.h"
-#include "mujoco.h"
 
 namespace torch{
 //PyTorch does not generate this constructor by default

@@ -31,6 +31,9 @@ int main(int argc, const char *argv[])
         device_type = torch::kCPU;
     }
     torch::Device device(device_type);
+    
+    at::set_num_threads(4);
+    std::cout << "Number of threads: " << at::get_num_threads() << std::endl;
 
     mj_activate(argv[1]);
     char error[1000];
@@ -56,7 +59,7 @@ int main(int argc, const char *argv[])
 
     //Hyperparameter
     auto steps_per_epoch = 4000;
-    auto epoch = 200;
+    auto epoch = 150;
     float gamma = 0.99;
     float actor_lr = 3.0e-4;
     float critic_lr = 3.0e-3;
