@@ -9,11 +9,9 @@ target_include_directories(main
     PRIVATE "${CMAKE_SOURCE_DIR}/include"
 )
 target_link_libraries(main 
-    #PRIVATE GL
-    #PRIVATE "${MUJOCO_ROOT}/bin/libglew.so"
-    #PRIVATE "${MUJOCO_ROOT}/bin/libglfw.so.3"
     PRIVATE "${MUJOCO_ROOT}/bin/libmujoco200nogl.so"
     PRIVATE drl
     PRIVATE drlmodel
+    PRIVATE MPI::MPI_CXX
     PRIVATE "${TORCH_LIBRARIES}"
 )
