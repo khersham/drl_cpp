@@ -1,11 +1,12 @@
 # Purpose
-This repo contains C++ code to train a vanilla policy gradient on half-cheetah model in Mujoco. 
+This repo contains C++ code to train different DRL algorithms on half-cheetah model in Mujoco. 
 The example code utilizes the latest PyTorch (1.5.0) and Mujoco 2.0. 
 The example shown here is heavily inspired from the Python implementation of [Spinningup](https://spinningup.openai.com/en/latest/). I am very grateful that OpenAI has open sourced such excellent guide for newcomer in Deep RL. 
 
-#How to install
+#How to install for VPG
 First download the Mujoco 2.0 and Libtorch 1.5.0 to the extern folder. 
 ```bash
+cd vpg
 mkdir extern
 pushd extern
 wget https://www.roboti.us/download/mujoco200_linux.zip
