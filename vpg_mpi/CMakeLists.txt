@@ -11,6 +11,7 @@ add_compile_options(-Wall -Wextra -pedantic -Werror -O3
 )
 
 find_package(Torch REQUIRED)
+find_package(MPI REQUIRED)
 
 add_subdirectory(src)
 add_subdirectory(main)

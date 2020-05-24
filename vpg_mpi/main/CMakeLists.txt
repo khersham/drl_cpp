@@ -12,5 +12,6 @@ target_link_libraries(main
     PRIVATE "${MUJOCO_ROOT}/bin/libmujoco200nogl.so"
     PRIVATE drl
     PRIVATE drlmodel
+    PRIVATE MPI::MPI_CXX
     PRIVATE "${TORCH_LIBRARIES}"
 )
