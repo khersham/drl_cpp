@@ -9,6 +9,7 @@ add_library(drl SHARED
 )
 target_link_libraries(drl 
     PRIVATE "${TORCH_LIBRARIES}"
+    PRIVATE MPI::MPI_CXX
     PRIVATE "${MUJOCO_ROOT}/bin/libmujoco200nogl.so"
 )
 target_include_directories(drl 
