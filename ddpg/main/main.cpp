@@ -62,7 +62,7 @@ int main(int argc, const char *argv[])
 
     //Hyperparameter
     auto steps_per_epoch = 4000;
-    auto epoch = 100;
+    auto epoch = 20;
     float gamma = 0.99;
     auto replay_size = 1000000;
     float polyak = 0.995;
@@ -167,8 +167,8 @@ int main(int argc, const char *argv[])
             std::cout << "EpRet = " << logger.mean() <<std::endl;
             
             auto [obs, obs2, act, rew] = buf.sample(batch_size);
-            std::cout << "Reward: " << rew << std::endl;
-            std::cout << "Action: " << act << std::endl;
+            //std::cout << "Reward: " << rew << std::endl;
+            //std::cout << "Action: " << act << std::endl;
 
         } 
         logger.reset();
