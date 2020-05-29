@@ -1,8 +1,8 @@
-#include <cmath>
 #include <iostream>
 
 #include "drl.h"
 
+/**
 namespace torch{
 //PyTorch does not generate this constructor by default
 torch::Tensor normal(const torch::Tensor &mean, 
@@ -11,9 +11,11 @@ torch::Tensor normal(const torch::Tensor &mean,
   return at::normal(mean, std, generator);  
 }
 }
+**/
 
 namespace drl {
 
+/**
 //log_prob function 
 torch::Tensor log_prob(const torch::Tensor& mean, const torch::Tensor& scale, const torch::Tensor& value) {
     auto std = torch::exp(scale);
@@ -28,7 +30,7 @@ torch::Tensor sample(const torch::Tensor& mean, const torch::Tensor& scale) {
     torch::NoGradGuard no_grad;
     return torch::normal(mean, torch::exp(scale));
 }
-
+**/
 
 VPGBuffer::VPGBuffer(const int64_t& obs_dim_, const int64_t& act_dim_, const int64_t& max_size_, 
                      const float& gamma_, const float& lam_):

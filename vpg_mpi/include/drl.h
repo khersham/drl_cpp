@@ -8,11 +8,16 @@
 #include "torch/torch.h"
 #include "mujoco.h"
 
+namespace torch{
+//PyTorch does not generate this constructor by default
+torch::Tensor normal(const torch::Tensor &mean, 
+                     const torch::Tensor &std, 
+                     torch::Generator *generator = nullptr) {
+  return at::normal(mean, std, generator);  
+}
+}
+
 namespace drl {
-
-torch::Tensor log_prob(const torch::Tensor&, const torch::Tensor&, const torch::Tensor&);
-torch::Tensor sample(const torch::Tensor&, const torch::Tensor&);
-
 
 class MLPImpl: public torch::nn::Module{
 private:
@@ -57,8 +62,9 @@ public:
         return nom / (2 * var) -logscale_ - constant;
     };
     
-    torch::Tensor smpl() {
-        return sample(mean_, scale_);
+    torch::Tensor sample() {
+        torch::NoGradGuard no_grad;
+        return torch::normal(mean_, torch::exp(scale_));
     };           
 };
 
@@ -125,7 +131,7 @@ public:
         torch::NoGradGuard no_grad;
         //No Grad now
         auto policy = actor_->dist(obs);
-        auto action = policy.smpl();
+        auto action = policy.sample();
         auto logp_a = (policy.log_prob(action)).sum();
         auto v_value = critic_->forward(obs);
         //v is zero dim tensor

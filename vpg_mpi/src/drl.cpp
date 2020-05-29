@@ -1,42 +1,10 @@
-#include <cmath>
 #include <iostream>
 #include <string>
 
 #include "drl.h"
 #include "mpi.h"
 
-namespace torch{
-//PyTorch does not generate this constructor by default
-torch::Tensor normal(const torch::Tensor &mean, 
-                     const torch::Tensor &std, 
-                     torch::Generator *generator = nullptr) {
-  return at::normal(mean, std, generator);  
-}
-
-}
-
 namespace drl {
-
-//log_prob function 
-torch::Tensor log_prob(const torch::Tensor& mean, 
-                       const torch::Tensor& scale, 
-                       const torch::Tensor& value) {
-
-    auto std = torch::exp(scale);
-    auto var = std * std;
-    auto logscale = std.log();
-    auto nom = (mean - value)*(value - mean);
-    auto constant = log(sqrt(2 * M_PI) );
-    return nom / (2 * var) -logscale - constant;
-}
-
-torch::Tensor sample(const torch::Tensor& mean, 
-                     const torch::Tensor& scale) {
-
-    torch::NoGradGuard no_grad;
-    return torch::normal(mean, torch::exp(scale));
-}
-
 
 VPGBuffer::VPGBuffer(const int64_t& obs_dim_, 
                      const int64_t& act_dim_, 
