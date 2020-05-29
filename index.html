@@ -86,15 +86,15 @@ MathJax = {
     The most important method in Cheetah class is <code class="c++">step</code>:
     <pre><code class="c++">
     std::tuple<torch::Tensor, torch::Tensor, bool> Cheetah::step(const torch::Tensor& action) {
-    auto xpos_init = data->qpos[0];
-    simulator(model, data, action, 5);
-    auto xpos_final = data->qpos[0];
-    auto reward_ctrl = -0.1*(action*action).sum().item<float>();
-    auto reward_run = (xpos_final - xpos_init) / model->opt.timestep;
-    auto reward = (reward_ctrl + reward_run)*torch::ones({1}, options)[0];
-    auto obs_ = obs();
+        auto xpos_init = data->qpos[0];
+        simulator(model, data, action, 5);
+        auto xpos_final = data->qpos[0];
+        auto reward_ctrl = -0.1*(action*action).sum().item<float>();
+        auto reward_run = (xpos_final - xpos_init) / model->opt.timestep;
+        auto reward = (reward_ctrl + reward_run)*torch::ones({1}, options)[0];
+        auto obs_ = obs();
      
-    return {obs_, reward, false};
+        return {obs_, reward, false};
     }
     </code></pre>
     where we use the first <code class="c++">qpos</code> observation as a measure of reward, i.e. 
@@ -165,7 +165,7 @@ MathJax = {
     private:
         torch::nn::Linear fc1, fc2, fc3;
     public:
-    //Constructor
+        //Constructor
         MLPImpl(const int64_t& obs_dim, const int64_t& act_dim, const int64_t& hidden):
             fc1{torch::nn::Linear(obs_dim, hidden)},
             fc2{torch::nn::Linear(hidden, hidden)},
@@ -185,8 +185,52 @@ MathJax = {
     };
     TORCH_MODULE(MLP);
     </code></pre>
+    Our MLPImpl class inherits from PyTorch's nn module. 
+    This should look familiar to you if you have used PyTorch in Python before.
+    We defined 3 fully connected layers for our MLP network, and it requires the dimension
+    of observation space, action space and hidden units. 
+    We register the module so that PyTorch will take care of the backpropagation of the weights accordingly
+    once we called the backpropagation function.     
+    As with Python, you will still need to define the forward function in the MLP class so that you can
+    apply this MLP on a tensor.
+    We need to call the macro <code class="c++">TORCH_MODULE</code> on MLP class to wrap the 
+    <code class="c++">std::shared_ptr&lt;MLPImpl&gt;</code>. 
+    Surprise! We have been working with pointers in C++ but we never write a line of code with 
+    pointers thanks to the <code class="c++">TORCH_MODULE</code> magic. 
+    </p>
 
-    \end{align}
+    <p> 
+    As the <code class="python">torch.distributions</code> is not available in C++, 
+    we would need to implement the Gaussian distribution on our own. 
+    The code below is one of the possibilities:
+    <pre><code class="c++">
+    class Gaussian {
+    private:
+        torch::Tensor mean_;
+        torch::Tensor scale_; 
+    public:
+        //Constructor
+        Gaussian(const torch::Tensor& mean, const torch::Tensor& scale): 
+        mean_{mean}, scale_{scale} {};
+    
+        torch::Tensor log_prob(const torch::Tensor& value) {
+            auto stdev = torch::exp(scale_);
+            auto var = stdev.pow(2);
+            auto logscale_ = stdev.log();
+            auto nom = -(mean_ - value).pow(2);
+            auto constant = log(sqrt(2 * M_PI) );
+            return nom / (2 * var) -logscale_ - constant;
+        };
+    
+        torch::Tensor sample() {
+            torch::NoGradGuard no_grad;
+            return torch::normal(mean_, torch::exp(scale_));
+        };           
+    };
+    </code></pre>
+    where I have omitted functions that we do not need. We can use <code class="c++">log_prob</code>
+    to get the log probability of a value under the Normal distribution, while <code class="c++">sample</code>
+    generates random values under Normal distribution.
     </p>
 
 </div>
