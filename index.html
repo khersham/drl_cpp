@@ -144,7 +144,7 @@ MathJax = {
     Essentially we want to perform gradient ascent for the following term:
     \begin{align}
     \nabla_{\theta} J(\pi_{\theta}) = 
-    \frac{1}{N} \sum_{i=0}^{N} \sum_{t=0}^{T} \nabla_{\theta} \log \pi_{\theta} (a_t \vert s_t) A(s_t, a_t)
+    \frac{1}{N} \sum_{i=0}^{N} \sum_{t=0}^{T} A(s_t, a_t)\nabla_{\theta} \log \pi_{\theta} (a_t \vert s_t)
     \end{align}
     
     where we first generate $N$ sample paths according to the policy $\pi_{\theta}$.
@@ -157,8 +157,10 @@ MathJax = {
 
     <h2>Actor</h2>
     <p>
-    Let us first look at the implementation of actor or agent. We define a Multilayer Perceptron
-    PyTorch Neural Network module with:
+    Let us first look at the implementation of actor or agent. 
+    The actor's role is to follow the policy trained by neural network. 
+    Essentially we are dealing with the $\pi(a_t \vert s_t)$ part in the equation above.
+    We define a Multilayer Perceptron PyTorch Neural Network module with:
     
     <pre><code class="c++">
     class MLPImpl: public torch::nn::Module{
@@ -228,9 +230,88 @@ MathJax = {
         };           
     };
     </code></pre>
-    where I have omitted functions that we do not need. We can use <code class="c++">log_prob</code>
-    to get the log probability of a value under the Normal distribution, while <code class="c++">sample</code>
-    generates random values under Normal distribution.
+    where I have omitted functions that we do not need. 
+    We can use <code class="c++">log_prob</code> to get the log probability of a value under 
+    the Normal distribution, 
+    while <code class="c++">sample</code> generates random values under Normal distribution. 
+    The <code class="c++">torch::NoGradGuard</code> turns off the need for PyTorch to keep track of 
+    the gradient of the tensors defined within the scope of <code class="c++">sample</code>.
+    </p>
+
+    <p>
+    With the above classes defined, we create the actor class which contains a MLP network. 
+    The <code class="c++">dist</code> function returns a Gaussian distribution with its mean
+    parameterized by MLP for each observation. 
+    The <code class="c++">forward</code> function returns the Gaussian distribution as 
+    the policy and log probability $\log \pi(a_t \vert s_t)$.
+    <pre><code class="c++">
+    class MLPGaussianActorImpl: public torch::nn::Module {
+    private:
+        torch::Tensor log_std_;
+        MLP mu_net_;
+    
+    public:
+        MLPGaussianActorImpl(const int64_t& obs_dim, const int64_t& act_dim, const int64_t& hidden):
+        log_std_{-0.5*torch::ones({act_dim})}, 
+        mu_net_{obs_dim, act_dim, hidden} {
+            register_module("actor", mu_net_);
+            register_parameter("log_std", log_std_);
+        }
+    
+        Gaussian dist(const torch::Tensor& obs) {
+            Gaussian dist_ {mu_net_->forward(obs), log_std_};
+            return dist_;
+        };
+    
+        std::tuple<Gaussian, torch::Tensor> forward(const torch::Tensor& obs, const torch::Tensor& act) {
+            auto gauss = dist(obs);
+            auto logprob = (gauss.log_prob(act)).sum(-1);
+            return {gauss, logprob.to(torch::kCPU)};
+        };
+    
+    };
+    TORCH_MODULE(MLPGaussianActor);
+    </code></pre>
+    </p>
+
+    <h2>Critic</h2>
+    <p>
+    We will deal with the proportional factor $A(s_t, a_t)$ in this section. 
+    This advantage function for GAE paper is calculated with 
+    \begin{align}
+    A_t &= \sum_{l=0}^{\infty} (\gamma \lambda)^{l} \delta_{t+l} \\
+    \delta_{t+l} &= r_t + \gamma V (s_{t+1}) - V(s_{t})
+    \end{align}
+    where $r_t$ is the reward collected at timestep $t$ and $V(s_t)$ is the value function at state $s_t$. 
+    The parameter $\gamma$ and $\lambda$ can be tuned.
+    This function is implemented in <code class="c++">VPGBuffer::finish_path</code> and will not be
+    shown here. 
+    Please check out the repo for more details.     
+    The advantage function is used in conjunction with $\log \pi (a_t \vert s_t)$ to update the policy.
+    You may now ask, where do we get the value function $V(s_t)$ from? 
+    This is where we need to introduce a critic neural network to approximate $V(s_t)$:
+
+    <pre><code class="c++"> 
+    class MLPCriticImpl: public torch::nn::Module {
+    private:
+        MLP critic_net_;
+        
+    public:
+        MLPCriticImpl(const int64_t& obs_dim, const int64_t& hidden):
+        critic_net_{obs_dim, 1, hidden} {
+            register_module("critic", critic_net_);
+        }
+    
+        torch::Tensor forward(const torch::Tensor& obs) {
+            return (critic_net_->forward(obs)).to(torch::kCPU).squeeze({-1});
+        };
+    };
+    TORCH_MODULE(MLPCritic);
+    </code></pre> 
+    The value function will be trained to minimize its difference from reward-to-go function 
+    $\hat{R}_{t}=\sum_{l=0}^{\infty} \gamma^{l} r_{t+l}$. 
+    The loss of actor and critic is computed by <code>compute_loss_pi</code> and <code>compute_loss_v</code>
+    respectively.
     </p>
 
 </div>
