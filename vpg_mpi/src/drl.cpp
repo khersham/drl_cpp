@@ -105,7 +105,7 @@ torch::Tensor compute_loss_v(const torch::Tensor& obs,
 
     auto v = (ac->critic_)->forward(obs);
     auto loss_v = ((v - ret).pow(2)).mean();
-    //Policy loss
+    //v loss
     return loss_v;
 }
 
