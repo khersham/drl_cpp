@@ -84,19 +84,21 @@ MathJax = {
     </ol>
     To encapsulate the interaction with Mujoco simulator, we create a Cheetah class like in OpenAI Gym.
     The most important method in Cheetah class is <code class="c++">step</code>:
-    <pre><code class="c++">
-    std::tuple<torch::Tensor, torch::Tensor, bool> Cheetah::step(const torch::Tensor& action) {
-        auto xpos_init = data->qpos[0];
-        simulator(model, data, action, 5);
-        auto xpos_final = data->qpos[0];
-        auto reward_ctrl = -0.1*(action*action).sum().item<float>();
-        auto reward_run = (xpos_final - xpos_init) / model->opt.timestep;
-        auto reward = (reward_ctrl + reward_run)*torch::ones({1}, options)[0];
-        auto obs_ = obs();
-     
-        return {obs_, reward, false};
-    }
-    </code></pre>
+
+<pre><code class="c++">
+std::tuple<torch::Tensor, torch::Tensor, bool> Cheetah::step(const torch::Tensor& action) {
+    auto xpos_init = data->qpos[0];
+    simulator(model, data, action, 5);
+    auto xpos_final = data->qpos[0];
+    auto reward_ctrl = -0.1*(action*action).sum().item<float>();
+    auto reward_run = (xpos_final - xpos_init) / model->opt.timestep;
+    auto reward = (reward_ctrl + reward_run)*torch::ones({1}, options)[0];
+    auto obs_ = obs();
+ 
+    return {obs_, reward, false};
+}
+</code></pre>
+
     where we use the first <code class="c++">qpos</code> observation as a measure of reward, i.e. 
     how far the cheetah has traveled.
     We also penalize the reward should the actuators try to generate volative movement. 
@@ -113,22 +115,23 @@ MathJax = {
     For our VPG implementation, first create a buffer to store observations, actions, rewards, advantage,
     reward-to-go and the logarithm of policy.  
     
-    <pre><code class="c++">
-    VPGBuffer(const int64_t& obs_dim_, 
-              const int64_t& act_dim_, 
-              const int64_t& max_size_,
-              const float& gamma_, 
-              const float& lam_):
-        gamma{gamma_}, lam{lam_}, max_size{max_size_} {
-        obs_buf = torch::zeros({max_size, obs_dim_}, options);
-        act_buf = torch::zeros({max_size, act_dim_}, options);
-        adv_buf = torch::zeros(max_size, options);
-        rew_buf = torch::zeros(max_size, options);
-        ret_buf = torch::zeros(max_size, options);
-        val_buf = torch::zeros(max_size, options);
-        logp_buf = torch::zeros(max_size, options);
-    }
-    </code></pre>
+<pre><code class="c++">
+VPGBuffer(const int64_t& obs_dim_, 
+          const int64_t& act_dim_, 
+          const int64_t& max_size_,
+          const float& gamma_, 
+          const float& lam_):
+    gamma{gamma_}, lam{lam_}, max_size{max_size_} {
+    obs_buf = torch::zeros({max_size, obs_dim_}, options);
+    act_buf = torch::zeros({max_size, act_dim_}, options);
+    adv_buf = torch::zeros(max_size, options);
+    rew_buf = torch::zeros(max_size, options);
+    ret_buf = torch::zeros(max_size, options);
+    val_buf = torch::zeros(max_size, options);
+    logp_buf = torch::zeros(max_size, options);
+}
+</code></pre>
+
     The <code class="c++">options</code> argument is used for PyTorch to create a float tensor for us. 
     You can see that the syntax to create a PyTorch tensor with all entries of zeros is similar to
     the Python's syntax.
@@ -162,31 +165,32 @@ MathJax = {
     Essentially we are dealing with the $\pi(a_t \vert s_t)$ part in the equation above.
     We define a Multilayer Perceptron PyTorch Neural Network module with:
     
-    <pre><code class="c++">
-    class MLPImpl: public torch::nn::Module{
-    private:
-        torch::nn::Linear fc1, fc2, fc3;
-    public:
-        //Constructor
-        MLPImpl(const int64_t& obs_dim, const int64_t& act_dim, const int64_t& hidden):
-            fc1{torch::nn::Linear(obs_dim, hidden)},
-            fc2{torch::nn::Linear(hidden, hidden)},
-            fc3{torch::nn::Linear(hidden, act_dim)}
-        {
-            register_module("fc1", fc1);
-            register_module("fc2", fc2);
-            register_module("fc3", fc3);
-        }
+<pre><code class="c++">
+class MLPImpl: public torch::nn::Module{
+private:
+    torch::nn::Linear fc1, fc2, fc3;
+public:
+    //Constructor
+    MLPImpl(const int64_t& obs_dim, const int64_t& act_dim, const int64_t& hidden):
+        fc1{torch::nn::Linear(obs_dim, hidden)},
+        fc2{torch::nn::Linear(hidden, hidden)},
+        fc3{torch::nn::Linear(hidden, act_dim)}
+    {
+        register_module("fc1", fc1);
+        register_module("fc2", fc2);
+        register_module("fc3", fc3);
+    }
 
-        torch::Tensor forward(torch::Tensor x) {
-            x = torch::tanh(fc1->forward(x));
-            x = torch::tanh(fc2->forward(x));
-            x = fc3->forward(x);
-            return x;
-        }
-    };
-    TORCH_MODULE(MLP);
-    </code></pre>
+    torch::Tensor forward(torch::Tensor x) {
+        x = torch::tanh(fc1->forward(x));
+        x = torch::tanh(fc2->forward(x));
+        x = fc3->forward(x);
+        return x;
+    }
+};
+TORCH_MODULE(MLP);
+</code></pre>
+
     Our MLPImpl class inherits from PyTorch's nn module. 
     This should look familiar to you if you have used PyTorch in Python before.
     We defined 3 fully connected layers for our MLP network, and it requires the dimension
@@ -205,31 +209,33 @@ MathJax = {
     As the <code class="python">torch.distributions</code> is not available in C++, 
     we would need to implement the Gaussian distribution on our own. 
     The code below is one of the possibilities:
-    <pre><code class="c++">
-    class Gaussian {
-    private:
-        torch::Tensor mean_;
-        torch::Tensor scale_; 
-    public:
-        //Constructor
-        Gaussian(const torch::Tensor& mean, const torch::Tensor& scale): 
-        mean_{mean}, scale_{scale} {};
-    
-        torch::Tensor log_prob(const torch::Tensor& value) {
-            auto stdev = torch::exp(scale_);
-            auto var = stdev.pow(2);
-            auto logscale_ = stdev.log();
-            auto nom = -(mean_ - value).pow(2);
-            auto constant = log(sqrt(2 * M_PI) );
-            return nom / (2 * var) -logscale_ - constant;
-        };
-    
-        torch::Tensor sample() {
-            torch::NoGradGuard no_grad;
-            return torch::normal(mean_, torch::exp(scale_));
-        };           
+
+<pre><code class="c++">
+class Gaussian {
+private:
+    torch::Tensor mean_;
+    torch::Tensor scale_; 
+public:
+    //Constructor
+    Gaussian(const torch::Tensor& mean, const torch::Tensor& scale): 
+    mean_{mean}, scale_{scale} {};
+
+    torch::Tensor log_prob(const torch::Tensor& value) {
+        auto stdev = torch::exp(scale_);
+        auto var = stdev.pow(2);
+        auto logscale_ = stdev.log();
+        auto nom = -(mean_ - value).pow(2);
+        auto constant = log(sqrt(2 * M_PI) );
+        return nom / (2 * var) -logscale_ - constant;
     };
-    </code></pre>
+
+    torch::Tensor sample() {
+        torch::NoGradGuard no_grad;
+        return torch::normal(mean_, torch::exp(scale_));
+    };           
+};
+</code></pre>
+
     where I have omitted functions that we do not need. 
     We can use <code class="c++">log_prob</code> to get the log probability of a value under 
     the Normal distribution, 
@@ -244,34 +250,36 @@ MathJax = {
     parameterized by MLP for each observation. 
     The <code class="c++">forward</code> function returns the Gaussian distribution as 
     the policy and log probability $\log \pi(a_t \vert s_t)$.
-    <pre><code class="c++">
-    class MLPGaussianActorImpl: public torch::nn::Module {
-    private:
-        torch::Tensor log_std_;
-        MLP mu_net_;
-    
-    public:
-        MLPGaussianActorImpl(const int64_t& obs_dim, const int64_t& act_dim, const int64_t& hidden):
-        log_std_{-0.5*torch::ones({act_dim})}, 
-        mu_net_{obs_dim, act_dim, hidden} {
-            register_module("actor", mu_net_);
-            register_parameter("log_std", log_std_);
-        }
-    
-        Gaussian dist(const torch::Tensor& obs) {
-            Gaussian dist_ {mu_net_->forward(obs), log_std_};
-            return dist_;
-        };
-    
-        std::tuple<Gaussian, torch::Tensor> forward(const torch::Tensor& obs, const torch::Tensor& act) {
-            auto gauss = dist(obs);
-            auto logprob = (gauss.log_prob(act)).sum(-1);
-            return {gauss, logprob.to(torch::kCPU)};
-        };
-    
+
+<pre><code class="c++">
+class MLPGaussianActorImpl: public torch::nn::Module {
+private:
+    torch::Tensor log_std_;
+    MLP mu_net_;
+
+public:
+    MLPGaussianActorImpl(const int64_t& obs_dim, const int64_t& act_dim, const int64_t& hidden):
+    log_std_{-0.5*torch::ones({act_dim})}, 
+    mu_net_{obs_dim, act_dim, hidden} {
+        register_module("actor", mu_net_);
+        register_parameter("log_std", log_std_);
+    }
+
+    Gaussian dist(const torch::Tensor& obs) {
+        Gaussian dist_ {mu_net_->forward(obs), log_std_};
+        return dist_;
     };
-    TORCH_MODULE(MLPGaussianActor);
-    </code></pre>
+
+    std::tuple<Gaussian, torch::Tensor> forward(const torch::Tensor& obs, const torch::Tensor& act) {
+        auto gauss = dist(obs);
+        auto logprob = (gauss.log_prob(act)).sum(-1);
+        return {gauss, logprob.to(torch::kCPU)};
+    };
+
+};
+TORCH_MODULE(MLPGaussianActor);
+</code></pre>
+
     </p>
 
     <h2>Critic</h2>
@@ -292,26 +300,117 @@ MathJax = {
     This is where we need to introduce a critic neural network to approximate $V(s_t)$:
 
     <pre><code class="c++"> 
-    class MLPCriticImpl: public torch::nn::Module {
-    private:
-        MLP critic_net_;
-        
-    public:
-        MLPCriticImpl(const int64_t& obs_dim, const int64_t& hidden):
-        critic_net_{obs_dim, 1, hidden} {
-            register_module("critic", critic_net_);
-        }
+class MLPCriticImpl: public torch::nn::Module {
+private:
+    MLP critic_net_;
     
-        torch::Tensor forward(const torch::Tensor& obs) {
-            return (critic_net_->forward(obs)).to(torch::kCPU).squeeze({-1});
-        };
+public:
+    MLPCriticImpl(const int64_t& obs_dim, const int64_t& hidden):
+    critic_net_{obs_dim, 1, hidden} {
+        register_module("critic", critic_net_);
+    }
+
+    torch::Tensor forward(const torch::Tensor& obs) {
+        return (critic_net_->forward(obs)).to(torch::kCPU).squeeze({-1});
     };
+};
     TORCH_MODULE(MLPCritic);
     </code></pre> 
+
     The value function will be trained to minimize its difference from reward-to-go function 
     $\hat{R}_{t}=\sum_{l=0}^{\infty} \gamma^{l} r_{t+l}$. 
     The loss of actor and critic is computed by <code>compute_loss_pi</code> and <code>compute_loss_v</code>
     respectively.
+    The actor class and critic class will be grouped together in a actor-critic class 
+    <code>ActorCriticImpl</code>.
+    I will skip the explanation for this class as it is just a convenient packaging of classes and offers
+    no new insights.
+    </p>
+
+    <h2>Training</h2>
+    <p>
+    Let us look at the main part on how to train the whole thing. 
+
+<pre><code class="c++">
+for (int i=0; i != epoch; ++i) {
+    for (int t=0; t!= steps_per_epoch; ++t) {
+        auto [action, v, logp] = ac->forward(obs.to(device));
+
+        auto [next_obs, reward, d] = cheetah.step(action);
+        ep_ret += reward.item<float>();
+        ++ep_len;
+        buf.store(obs, action, reward, v, logp);
+
+        obs = next_obs;
+
+        auto timeout = (ep_len == max_ep_len);
+        auto terminal = (timeout || d);
+        auto epoch_ended = (t == (steps_per_epoch - 1));
+        if (terminal || epoch_ended) {
+            if (epoch_ended && !terminal){
+                std::cout << "Trajectory cut off" << std::endl;
+            }
+            if (timeout || epoch_ended) {
+                auto [dummy1, v, dummy2] = ac->forward(obs.to(device));
+                buf.finish_path(v);
+            } else {
+                buf.finish_path(torch::zeros(1, options).squeeze({-1}) );
+            }
+
+            if (terminal) {
+                logger.dict.push_back(ep_ret);
+            }
+
+            obs = cheetah.reset();
+            ep_ret = 0.0;
+            ep_len = 0;
+        }
+    }
+
+    drl::update(buf, ac, pi_optimizer, v_optimizer, critic_iter, device);
+}
+</code></pre>
+
+    I have skipped the variable and class initialization part, which you can refer to in the code
+    repo. 
+    For each epoch and every timestep, we get the current observation from our simulator and feed it
+    into our actor-critic class. 
+    With the obtained action from our policy, we pass the action back to our simulator, obtaining reward and
+    next observation. 
+    We store the observation, action, reward, value function and $\log \pi (a_t \vert s_t)$ in our buffer.
+    We then update our observation to the next observation. 
+    We need to invoke the <code>finish_path</code> function to truncate the trajectory if we exceed 
+    the desired timestep or epoch. 
+    Once the buffer is full, we call its <code>update</code> method. 
+
+<pre><code class="c++">
+void update(VPGBuffer& buf, ActorCritic& ac,
+            torch::optim::Adam& pi_optimizer,
+            torch::optim::Adam& v_optimizer,
+            const int& critic_iter,
+            const torch::Device& device) {
+
+    auto [obs, act, ret, adv, logp] = buf.get();
+    obs = obs.to(device);
+    act = act.to(device);
+
+    pi_optimizer.zero_grad();
+    auto pi_loss = compute_loss_pi(obs, act, adv, ac);
+
+    pi_loss.backward();
+    pi_optimizer.step();
+
+    torch::Tensor v_loss;
+    for (int i=0; i != critic_iter; ++i){
+        v_optimizer.zero_grad();
+        v_loss = compute_loss_v(obs, ret, ac);
+        v_loss.backward();
+        v_optimizer.step();
+    }
+}
+</code></pre>
+    
+    Essentially we are doing backpropagation during the <code>update</code> step. 
     </p>
 
 </div>
