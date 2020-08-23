@@ -5,6 +5,8 @@
 <meta http-equiv="x-ua-compatible" content="ie=edge">
 <meta name="viewport" content="width=device-width">
 <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/styles/default.min.css">
+<link href="css/custom.css" rel="stylesheet"/>
 <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 <script>
 MathJax = {
@@ -431,19 +433,33 @@ while( (d->time - simstart) < 1.0/ 20.0 ) {
     obs = next_obs;
 }
 </code></pre>
-
+    <div class="row">
+    <div class="col-4">
+        <img src="video/output.gif" style="float:left;">
+    </div>
+    <div class="col">
     <p>
     We simulate the physics in real time and render the video in 20fps. 
     We have added thread blocking function for 30 milliseconds so that the action of our cheetah does not look
     too jerky. 
+    You can press backspace to restart the simulation. 
+    Press Ctrl-C to terminate the simulation.
+    Notice that VPG is not stable and chances are you might encounter a couple replays where our cheetah will
+    flip over to crawl its way with its back to the right! 
     </p>
+    </div>
+    </div>
 
-    <img src="video/output.gif">
+    <h2>Summary</h2>
+    <p>
+    We have implemented vanilla policy gradient with the PyTorch C++ interface and Mujoco simulator. 
+    Policy gradient is known to be not very stable during the training phase and we will implement 
+    other Deep Reinforcement Algorithm to compare the performance with our baseline model. 
+    Stay tune and keep learning.
+    </p>    
 
 </div>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-<link rel="stylesheet"
-      href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/styles/default.min.css">
 <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.3/highlight.min.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
 </body>

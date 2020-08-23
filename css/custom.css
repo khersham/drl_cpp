@@ -1,0 +1,4 @@
+.jumbotron{
+background: rgb(202,129,252);
+background: linear-gradient(90deg, rgba(202,129,252,1) 0%, rgba(207,0,0,1) 78%, rgba(255,183,82,1) 100%);
+}
