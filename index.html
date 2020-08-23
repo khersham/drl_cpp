@@ -411,7 +411,39 @@ void update(VPGBuffer& buf, ActorCritic& ac,
 </code></pre>
     
     Essentially we are doing backpropagation during the <code>update</code> step. 
+    The model file will be saved under model.pt. 
+    We can use the model for testing in the next section.
     </p>
+
+    <h2>Testing your model</h2>
+    <p>
+    In the inference subfolder of the repository you can take a look at the video.cpp file. 
+    It contains the bare minimal Mujoco C++ code for rendering our cheetah and simulating 
+    its action based on our trained model.  
+    Essentially the important part is shown below:
+    </p>
+
+<pre><code class="c++">
+while( (d->time - simstart) < 1.0/ 20.0 ) {
+    auto [action, v, logp] = ac->forward(obs);
+    auto [next_obs, reward, d] = cheetah.step(action);
+    std::this_thread::sleep_for (std::chrono::milliseconds(30));
+    obs = next_obs;
+}
+</code></pre>
+
+    <p>
+    We simulate the physics in real time and render the video in 20fps. 
+    We have added thread blocking function for 30 milliseconds so that the action of our cheetah does not look
+    too jerky. 
+    </p>
+
+    <video controls width="500">
+
+        <source src="./video/output.webm" type="video/webm">
+
+    Sorry, your browser doesn't support embedded videos.
+    </video>
 
 </div>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
